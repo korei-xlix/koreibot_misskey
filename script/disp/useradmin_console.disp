@@ -1,0 +1,53 @@
+--------------------
+ ユーザ管理
+--------------------
+[@USERADMIN-TWITTER@]
+[@USERADMIN-TWITTER-ID@]
+[@USERADMIN-USER_LEVEL@]
+
+--------------------
+[@USERADMIN-MYFOLLOW@]
+[@USERADMIN-FOLLOWER@]
+
+[@USERADMIN-PROTECT@]
+[@USERADMIN-MYBLOCK@]
+[@USERADMIN-BLOCKED@]
+
+#[@USERADMIN-FAVO_DATE@]
+#[@USERADMIN-SEND_CNT@]
+#[@USERADMIN-FAVO_CNT@]
+#[@USERADMIN-NOW_FAVO_CNT@]
+#[@USERADMIN-LIST_DATE@]
+#
+#[@USERADMIN-LIST_FAVO_DATE@]
+[@USERADMIN-R_FAVO_DATE@]
+[@USERADMIN-P_FAVO_DATE@]
+
+[@USERADMIN-LIST_DATE@]
+[@USERADMIN-SEND_DATE@]
+
+[@USERADMIN-EXIST@]
+[@USERADMIN-DB_REGDATE@]
+
+[@USERADMIN-MEMO@]
+--------------------
+
+コマンドを入力してください。
+
+#    [\ml]       相互フォローレベル変更（非絡み←→通常）
+    [\rm]       リムーブする
+    [\rma]      関係をリセットする（リムーブもする）
+
+    [\p]        ブラウザでプロフィールを表示する
+    [\v]        VIP設定（相互フォロー時）
+    [\r]        自動削除禁止
+    [\m]        メモする
+
+    [\fl]       レベル強制変更
+
+    [\q]        １つ前に戻る
+
+
+--------------------
+□ 直近の操作履歴 □
+[@USERADMIN-LOG@]
