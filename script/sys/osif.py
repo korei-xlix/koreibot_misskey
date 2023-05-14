@@ -707,7 +707,9 @@ class CLS_OSIF() :
 	@classmethod
 	def sCatErr( cls, inRes ):
 		try:
-			wMsg = str(inRes['Class']) + ": " + str(inRes['Func']) + ": " + str(inRes['Reason'])
+###			wMsg = str(inRes['Class']) + ": " + str(inRes['Func']) + ": " + str(inRes['Reason'])
+			wResult = inRes['Reason'].replace( "'", "'\\" )
+			wMsg = str(inRes['Class']) + ": " + str(inRes['Func']) + ": " + str( wResult )
 		except ValueError as err :
 			wMsg = str(inRes['Class']) + ": " + str(inRes['Func']) + ": " + "Detect Exception"
 		
@@ -842,12 +844,25 @@ class CLS_OSIF() :
 #   wRes.span()   マッチの位置 (start, end) を含むタプルを返す。
 #####################################################
 	@classmethod
-	def sRe_Search( cls, inPatt, inCont ):
-		try:
-			wRes = re.search( inPatt, inCont )
-		except:
-			return False
+	def sRe_Search( cls, inPatt=None, inCont=None ):
+		wRes = {
+			"Result" : False,
+			"Match"	 : False,
+			"Index"	 : -1
+		}
 		
+		if inPatt==None or inCont==None :
+			return wRes
+		
+		try:
+			wSubRes = re.search( inPatt, inCont )
+			if wSubRes!=None :
+				wRes['Match'] = True
+				wRes['Index'] = wSubRes.start()
+		except:
+			return wRes
+		
+		wRes['Result'] = True
 		return wRes
 
 
@@ -856,20 +871,63 @@ class CLS_OSIF() :
 # 文字列からパターン置換
 #####################################################
 	@classmethod
-	def sRe_Replace( cls, inPatt, inCont, inReplace ):
+	def sRe_Replace( cls, inPatt=None, inCont=None ):
 		wRes = {
-			"Result"	: False,
-			"Match"		: False,
-			"After"		: None
+			"Result" : False,
+			"Match"	 : False,
+			"After"	 : None
 		}
 		
-		if inCont=="" :
+		if inPatt==None or inCont==None :
 			return wRes
 		
-		wRes['Match'] = cls.sRe_Search( inPatt, inCont )
+		wSubRes = cls.sRe_Search( inPatt, inCont )
+		if wSubRes['Result']!=True :
+			return wRes
+		
+		wRes['Match'] = True
+		try:
+			wRes['After'] = inCont.replace( inPatt, inCont )
+		except:
+			return wRes
+		
+		wRes['Result'] = True
+		return wRes
+
+
+
+#####################################################
+# 文字列を小文字化する
+#####################################################
+	@classmethod
+	def sRe_Lower( cls, inCont ):
+		wRes = {
+			"Result" : False,
+			"After"	 : None
+		}
 		
 		try:
-			wRes['After'] = inCont.replace( inPatt, inReplace )
+			wRes['After'] = inCont.lower()
+		except:
+			return wRes
+		
+		wRes['Result'] = True
+		return wRes
+
+
+
+#####################################################
+# 文字列を配列に分解する
+#####################################################
+	@classmethod
+	def sRe_Split( cls, inPatt=None, inCont=None  ):
+		wRes = {
+			"Result" : False,
+			"After"	 : None
+		}
+		
+		try:
+			wRes['After'] = inCont.split( inPatt )
 		except:
 			return wRes
 		

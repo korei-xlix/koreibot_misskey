@@ -1,9 +1,9 @@
 #!/usr/bin/python
 # coding: UTF-8
 #####################################################
-# ::Project  : Korei Bot Win
+# ::Project  : Korei Bot Misskey
 # ::Admin    : Korei (@korei-xlix)
-# ::github   : https://github.com/korei-xlix/koreibot_win/
+# ::github   : https://github.com/korei-xlix/koreibot_misskey/
 # ::Class    : ディスプレイ表示
 #####################################################
 
@@ -13,6 +13,87 @@ from gval import gVal
 #####################################################
 class CLS_MyDisp():
 #####################################################
+
+
+
+#####################################################
+# コンソール表示
+#####################################################
+	@classmethod
+	def sViewConsole( cls ):
+		#############################
+		# 応答形式の取得
+		#   "Result" : False, "Class" : None, "Func" : None, "Reason" : None, "Responce" : None
+		wRes = CLS_OSIF.sGet_Resp()
+		wRes['Class'] = "CLS_MyDisp"
+		wRes['Func']  = "sViewConsole"
+		
+		wKey = "MainConsole"
+		#############################
+		# ディスプレイファイルの確認
+		wKeylist = gVal.DEF_STR_DISPFILE.keys()
+		if wKey not in wKeylist :
+			###キーがない(指定ミス)
+			wRes['Reason'] = "Display key is not found: inDisp= " + wKey
+			CLS_OSIF.sErr( wRes )
+			return wRes
+		
+		if CLS_File.sExist( gVal.DEF_STR_DISPFILE[wKey] )!=True :
+			###ファイルがない...(消した？)
+			wRes['Reason'] = "Displayファイルがない: file=" + gVal.DEF_STR_DISPFILE[wKey]
+			CLS_OSIF.sErr( wRes )
+			return wRes
+		
+		#############################
+		# ディスプレイファイルの読み込み
+		wDispFile = []
+		if CLS_File.sReadFile( gVal.DEF_STR_DISPFILE[wKey], outLine=wDispFile, inStrip=False )!=True :
+			wRes['Reason'] = "Displayファイルがない(sReadFile): file=" + gVal.DEF_STR_DISPFILE[wKey]
+			CLS_OSIF.sErr( wRes )
+			return wRes
+		
+		if len(wDispFile)<=1 :
+			wRes['Reason'] = "Displayファイルが空: file=" + gVal.DEF_STR_DISPFILE[wKey]
+			CLS_OSIF.sErr( wRes )
+			return wRes
+		
+		#############################
+		# 画面に表示する
+		for wLine in wDispFile :
+			###コメントはスキップ
+			if wLine.find("#")==0 :
+				continue
+			
+			#############################
+			# インプリメント処理
+			
+			###インプリ：タイトル名
+			if "[@CONSOLE-TITLE@]"==wLine :
+				wLine = str( gVal.STR_SystemInfo['ClientName'] ) + " CONSOLE"
+				CLS_OSIF.sPrn( wLine )
+			
+			###インプリ：対象ユーザ
+			elif "[@USER-ACCOUNT@]"==wLine :
+				wLine = "対象ユーザ  @" + gVal.STR_UserInfo['Account']
+				CLS_OSIF.sPrn( wLine )
+			
+			#############################
+			# print表示
+			else:
+				CLS_OSIF.sPrn( wLine )
+		
+		#############################
+		# 入力コンソール
+		wConsole = "Command ? > "
+		wInput = CLS_OSIF.sInp( wConsole )
+		
+		#############################
+		# 正常処理
+		wRes['Responce'] = wInput
+		wRes['Result']   = True
+		return wRes
+
+
 
 #####################################################
 # インプリメント処理

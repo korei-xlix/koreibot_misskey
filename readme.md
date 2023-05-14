@@ -1,13 +1,9 @@
-
-
-
-# これーbot misskey
+# samafeald bot misskey
 **～取扱説明書 兼 設計仕様書～**  
 
 
 # システム概要 <a name="aSystemSummary"></a>
 python3で作成したmisskey支援用botです。  
-
 
 
 
@@ -30,7 +26,7 @@ python3で作成したmisskey支援用botです。
 
 # 前提 <a name="aPremise"></a>
 * python3（v3.8.5で確認）
-* postgreSQL（Windows版）
+* MySQL（MariaDB）（Linux版）
 * Linux（開発はcugwin環境）
 * misskeyアカウント
 * githubアカウント
@@ -70,13 +66,15 @@ python3の処理で必要なライブラリをインストールします。
 python3の本体はCygwinと一緒にインストールされてるはずです。  
   
 なお、Galaxy Fleetで使うライブラリは以下の通りです。  
-* requests 
-* requests_oauthlib 
 * python-dateutil 
 * psycopg2
-* flask （要らないかも？）
 * apt-cyg（apt-getのcygwin版）
 * procps（apt-cygでインストール）
+* websockets
+* misskey.py
+* mysql-connector-python
+
+
 
 以下手順です。  
 * 1.以下のコマンドでpythonの動作テストしてみます。  
@@ -88,7 +86,9 @@ Python 3.8.2
 
 * 2.pip3でライブラリをインストールします。  
 ```
-$ pip3 install flask requests requests_oauthlib python-dateutil psycopg2
+$ pip3 install websockets misskey.py python-dateutil psycopg2 mysql-connector-python
+
+
 ～中略～
 
 $ pip3 list
@@ -151,60 +151,215 @@ $ source ~/.bash_profile
 
 
 
-## postgreSQLのインストール <a name="aSetup_postgresql"></a>
-postgreSQLをインストールします。  
-ここではpostgreSQL v15 で説明します。メジャーバージョンが異なると手順が変わる可能性がありますのでご留意ください。  
-  
-なお実行にはcygserverを使います。  
-  
-**既にpostgreSQLの環境ができている場合は、スキップできます。**  
-**特に問題なければ既存のpostgreSQLを使っても問題ないと思います**  
+## MySQLのインストール <a name="aSetup_mysql"></a>
+MySQLをインストールします。  
 
+*1. cygwin SETUPで必要なライブラリをセットアップする。  
+	* mysql
+	* mysql-common
+	* mysql-server
 
+*2. 以下コマンドを実行してインストールする。  
 
-## postgreSQLのセットアップ
-postgreSQLをインストールします。  
-
-* 1.ソースコードのURLを以下で確認します。  
-  [postgresql HP](https://www.postgresql.org/download/)  
-  .qz形式を選択します。  
 ```
-$ cd 
-$ cd work
-$ wget [ソースコードのURL]
+$ mysql_install_db
+
+To start mysqld at boot time you have to copy
+support-files/mysql.server to the right place for your system
+～～～～～～
+http://dev.mysql.com
+Consider joining MariaDB's strong and vibrant community:
+https://mariadb.org/get-involved/
 ```
 
-* 2.ソースコードをコンパイル、インストールします。  
+*3. MySQLを起動する。  
 ```
-$ tar -xvzf [アーカイブファイル名]
-$ cd [解凍されたフォルダ]
-$ mkdir make_dir
-$ cd make_dir
-$ ../configure --enable-nls --enable-thread-safety
-$ make
-$ make install
-$ cd src/interfaces/libpq
-$ make
-$ make install
+$ mysqld_safe --datadir='/var/lib/mysql' &
+
+$ ps -ef
+     UID     PID    PPID  TTY        STIME COMMAND
+   Korei    1773    1683 pty0     09:18:25 /usr/bin/ps
+   Korei    1682       1 ?        09:07:10 /usr/bin/mintty
+   Korei    1368       1 ?          May  2 /usr/sbin/nginx
+   Korei    1369    1368 ?          May  2 /usr/sbin/nginx
+   Korei    1683    1682 pty0     09:07:10 /usr/bin/bash
+   Korei    1772    1710 pty0     09:18:02 /usr/sbin/mysqld
+   Korei    1710    1683 pty0     09:18:00 /usr/bin/sh
 ```
 
-* 3. .bash_profileに環境変数を追加します。  
+*4. テストログインする。  
+	初期はパスワードなし  
 ```
-$ vi /home/[Cygwinユーザ]/.bash_profile
+$ mysql -u root
 
-export PATH=/usr/local/pgsql/bin:/usr/local/pgsql/lib:$PATH
-export PGHOST=localhost
-export PGLIB=/usr/local/pgsql/lib
-export PGDATA=/var/postgresql/data
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+Your MariaDB connection id is 8
+Server version: 10.3.14-MariaDB Source distribution
 
-:wq
+Copyright (c) 2000, 2018, Oracle, MariaDB Corporation Ab and others.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+MariaDB [(none)]>
+
+
+MariaDB [(none)]> exit
+Bye
 ```
 
-* 4.追加したら以下を実行して、読み込ませます。  
+*5.rootのパスワードを変更する。  
 ```
-source ~/.bashrc
-source ~/.bash_profile
+$ mysqladmin -u root password '[パスワード]'
+$ mysql -u root -p
+Enter password:
+
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+Your MariaDB connection id is 10
+Server version: 10.3.14-MariaDB Source distribution
+
+Copyright (c) 2000, 2018, Oracle, MariaDB Corporation Ab and others.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+MariaDB [(none)]> exit
+Bye
 ```
+
+*6. 終了する。  
+```
+$ kill 1772
+-bash: kill: (1772) - No such process
+[1]+  終了                  mysqld_safe --datadir='/var/lib/mysql'
+
+killコマンドは何度か実行する必要がある？
+```
+
+*6.設定ファイルのバックアップと変更。（エンコードの変更）  
+
+```
+エンコードの確認
+$ mysql -u root -p
+Enter password:
+
+$ show variables like 'char%';
+
+
+MariaDB [(none)]> status
+--------------
+mysql  Ver 15.1 Distrib 10.3.14-MariaDB, for CYGWIN (x86_64) using  EditLine wrapper
+
+Connection id:          8
+Current database:
+Current user:           root@localhost
+SSL:                    Not in use
+Current pager:          stdout
+Using outfile:          ''
+Using delimiter:        ;
+Server:                 MariaDB
+Server version:         10.3.14-MariaDB Source distribution
+Protocol version:       10
+Connection:             Localhost via UNIX socket
+Server characterset:    latin1
+Db     characterset:    latin1
+
+
+※Server、Dbが latin1 なので変更する。exitで抜ける。
+
+
+設定ファイルのテンプレートをバックアップする
+$ cp -p /etc/my.cnf.d/server.cnf /etc/my.cnf.d/server.cnf.org
+
+
+設定ファイルを編集する
+$ sudo vi /etc/my.cnf.d/server.cnf
+
+
+以下を[mysqld]に以下を追加する。
+[mysqld]
+character-set-server = utf8
+
+
+エンコードが変更されたことを確認する。
+
+まずサービス起動
+$ mysqld_safe --datadir='/var/lib/mysql' &
+
+$ show variables like 'char%';
+
+MariaDB [(none)]> status
+
+--------------
+mysql  Ver 15.1 Distrib 10.3.14-MariaDB, for CYGWIN (x86_64) using  EditLine wrapper
+
+Server characterset:    utf8
+Db     characterset:    utf8
+```
+
+
+
+## botで使うデータベース作成
+botで使うユーザ、データベースを作成します。  
+
+
+$ mysql -u root -p
+
+
+### DB作成
+mysql > CREATE DATABASE [データベース名] CHARACTER SET utf8;
+
+mysql > CREATE DATABASE samafealdbot CHARACTER SET utf8;
+
+
+
+### ユーザ作成
+
+mysql > CREATE USER '[ユーザ名]'@'[ホスト名]' IDENTIFIED BY '[パスワード]';
+
+mysql > CREATE USER 'samafealdbot'@'localhost' IDENTIFIED BY '8YALkVbloDOp';
+
+
+
+### ユーザ権限付与
+
+mysql > GRANT ALL PRIVILEGES ON * . * TO '[ユーザ名]'@'[ホスト名]';
+mysql > GRANT CREATE, DROP, DELETE, INSERT, SELECT, UPDATE ON * . * TO '[ユーザ名]'@'[ホスト名]';
+
+mysql > GRANT CREATE, DROP, DELETE, INSERT, SELECT, UPDATE ON * . * TO 'samafealdbot'@'localhost';
+
+
+
+
+
+show databases;
+
+
+select host, user from mysql.user;
+
+
+
+show tables;
+
+
+
+
+
+$ mysql -h localhost -u samafealdbot -p samafealdbot
+
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+Your MariaDB connection id is 13
+Server version: 10.3.14-MariaDB Source distribution
+
+Copyright (c) 2000, 2018, Oracle, MariaDB Corporation Ab and others.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+MariaDB [(none)]>
+
+
+
+
+
+
 
 
 

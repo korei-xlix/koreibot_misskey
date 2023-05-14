@@ -1,23 +1,136 @@
 #!/usr/bin/python
 # coding: UTF-8
 #####################################################
-# ::Project  : Korei Bot Win
+# ::Project  : Korei Bot Misskey
 # ::Admin    : Korei (@korei-xlix)
-# ::github   : https://github.com/korei-xlix/koreibot_win/
+# ::github   : https://github.com/korei-xlix/koreibot_misskey/
 # ::Class    : bot制御(共通)
 #####################################################
-from mylog import CLS_Mylog
-from db_if import CLS_DB_IF
-from twitter_if import CLS_Twitter_IF
+###from mylog import CLS_Mylog
+###from db_if import CLS_DB_IF
+###from twitter_if import CLS_Twitter_IF
 
-from traffic import CLS_Traffic
-from ktime import CLS_TIME
+###from traffic import CLS_Traffic
+###from ktime import CLS_TIME
+###from filectrl import CLS_File
+
 from osif import CLS_OSIF
-from filectrl import CLS_File
 from gval import gVal
 #####################################################
 class CLS_BotCtrl():
 #####################################################
+	OBJ_Parent = ""				#親クラス実体
+
+#####################################################
+# Init
+#####################################################
+	def __init__( self, outRes, parentObj=None ):
+		#############################
+		# 応答形式の取得
+		#   "Result" : False, "Class" : None, "Func" : None, "Reason" : None, "Responce" : None
+		wRes = CLS_OSIF.sGet_Resp()
+		wRes['Class'] = "CLS_BotCtrl"
+		wRes['Func']  = "__init__"
+		
+		pRes = outRes
+		if parentObj==None :
+			###親クラス実体の未設定
+			pRes['Reason'] = "parentObj is none"
+			pRes['Result']  = False
+		else:
+			self.OBJ_Parent = parentObj
+			pRes['Result']  = True
+		
+		return
+
+
+
+#####################################################
+# GetParam
+#####################################################
+	def GetParam(self):
+		#############################
+		# 応答形式の取得
+		#   "Result" : False, "Class" : None, "Func" : None, "Reason" : None, "Responce" : None
+		wRes = CLS_OSIF.sGet_Resp()
+		wRes['Class'] = "CLS_BotCtrl"
+		wRes['Func']  = "GetParam"
+		
+		#############################
+		# 引数取得
+		wArg = CLS_OSIF.sGetArg()
+		if len(wArg)<2 :	#引数が足りない
+			wRes['Reason'] = "not enough arguments(1)= " + str( wArg )
+			CLS_OSIF.sErr( wRes )
+			return wRes
+		
+		#############################
+		# 引数取得
+		
+		#############################
+		# run : 通常起動モード
+		if wArg[1]=="run" :
+			if len(wArg)!=7 :
+				wRes['Reason'] = "not enough arguments(2)= " + str( wArg )
+				CLS_OSIF.sErr( wRes )
+				return wRes
+			
+			gVal.STR_SystemInfo['RunMode'] = wArg[1]
+			gVal.STR_UserInfo['Account']   = wArg[2]
+			gVal.STR_UserInfo['DB_HOST']   = wArg[3]
+			gVal.STR_UserInfo['DB_NAME']   = wArg[4]
+			gVal.STR_UserInfo['DB_USER']   = wArg[5]
+			gVal.STR_UserInfo['DB_PASS']   = wArg[6]
+		
+		#############################
+		# init : 初期化モード
+		elif wArg[1]=="init" :
+			if len(wArg)!=6 :
+				wRes['Reason'] = "not enough arguments(3)= " + str( wArg )
+				CLS_OSIF.sErr( wRes )
+				return wRes
+			
+			gVal.STR_SystemInfo['RunMode'] = wArg[1]
+			gVal.STR_UserInfo['DB_HOST']   = wArg[2]
+			gVal.STR_UserInfo['DB_NAME']   = wArg[3]
+			gVal.STR_UserInfo['DB_USER']   = wArg[4]
+			gVal.STR_UserInfo['DB_PASS']   = wArg[5]
+		
+		#############################
+		# regist : 登録モード
+		elif wArg[1]=="regist" :
+			if len(wArg)!=6 :
+				wRes['Reason'] = "not enough arguments(4)= " + str( wArg )
+				CLS_OSIF.sErr( wRes )
+				return wRes
+			
+			gVal.STR_SystemInfo['RunMode'] = wArg[1]
+			gVal.STR_UserInfo['DB_HOST']   = wArg[2]
+			gVal.STR_UserInfo['DB_NAME']   = wArg[3]
+			gVal.STR_UserInfo['DB_USER']   = wArg[4]
+			gVal.STR_UserInfo['DB_PASS']   = wArg[5]
+		
+
+
+		#############################
+		# ないモード
+		else :
+			wRes['Reason'] = "not mode: " + str( wArg[1] )
+			CLS_OSIF.sErr( wRes )
+			return wRes
+		
+		#############################
+		# 正常
+		wRes['Result'] = True	#正常
+		return wRes
+
+
+
+
+
+
+
+
 
 #####################################################
 # Botテスト

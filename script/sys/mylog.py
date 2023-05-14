@@ -1,9 +1,9 @@
 #!/usr/bin/python
 # coding: UTF-8
 #####################################################
-# ::Project  : Korei Bot Win
+# ::Project  : Korei Bot Misskey
 # ::Admin    : Korei (@korei-xlix)
-# ::github   : https://github.com/korei-xlix/koreibot_win/
+# ::github   : https://github.com/korei-xlix/koreibot_misskey/
 # ::Class    : ログ処理
 #####################################################
 # 書式:
@@ -13,22 +13,26 @@
 #	D :	gVal.OBJ_L.Log( "D", wRes )				潜在的エラー: ユーザ入力など予想外 or 後に問題を起こす可能性がある
 #	E :	gVal.OBJ_L.Log( "E", wRes )				不明なエラー: 判断がつかないエラー ありえないルートなど
 #
-#	S:	gVal.OBJ_L.Log( "S", wRes, "<理由>" )	システム    : botの実行、停止、再起動
-#	SC:	gVal.OBJ_L.Log( "SC", wRes, "<理由>" )	システム    : システムの設定変更
-#	SR:	gVal.OBJ_L.Log( "SR", wRes, "<理由>" )	システム    : システムの規制制御、自律制御
-#	R:	gVal.OBJ_L.Log( "R", wRes, "<理由>" )	ユーザ      : ユーザ登録、削除、抹消
-#	RC:	gVal.OBJ_L.Log( "RC", wRes, "<理由>" )	ユーザ      : ユーザ設定変更
-#	RR:	gVal.OBJ_L.Log( "RR", wRes, "<理由>" )	ユーザ      : ユーザ個別の規制制御、自律制御
-#	T:	gVal.OBJ_L.Log( "T", wRes, "<理由>" )	トラヒック  : システムトラヒック、期間トラヒック、通信トラヒック(統計)
+#	S:	gVal.OBJ_L.Log( "S", wRes, "<理由>" )	システム    : botの実行、停止、処理の起点
+#	SC:	gVal.OBJ_L.Log( "SC", wRes, "<理由>" )	システム    : システム情報の操作、永続的な書き換え
+#	SR:	gVal.OBJ_L.Log( "SR", wRes, "<理由>" )	システム    : システムの一時的な変更（規制制御）
+#	U+:	gVal.OBJ_L.Log( "U+", wRes, "[操作ユーザID]", "[操作内容]" )	ユーザ登録
+#	U-:	gVal.OBJ_L.Log( "U-", wRes, "[操作ユーザID]", "[操作内容]" )	ユーザ削除、抹消
+#	UC:	gVal.OBJ_L.Log( "UC", wRes, "[操作ユーザID]", "[操作内容]" )	ユーザ情報の永続的な書き換え
+#	UR:	gVal.OBJ_L.Log( "UR", wRes, "[操作ユーザID]", "[操作内容]" )	ユーザの一時的な変更（規制など）
+#	TS:	gVal.OBJ_L.Log( "TS", wRes, "[操作内容]" )						システムトラヒック：期間トラヒック、通信トラヒック(統計)
+#	TU:	gVal.OBJ_L.Log( "TU", wRes, "[操作ユーザID]", "[操作内容]" )	ユーザトラヒック：通信トラヒック(個別)、いいね、リノート
 #
-#	P :	gVal.OBJ_L.Log( "P", wRes )				データベース操作
-#	N :	gVal.OBJ_L.Log( "N", wRes, "<理由>" )	非表示の情報
-#	X :	gVal.OBJ_L.Log( "X", wRes )				テスト用ログ
+#	P :	gVal.OBJ_L.Log( "P", wRes, "[コマンド]", "[クエリ]" )	データベース操作
+#	N :	gVal.OBJ_L.Log( "N", wRes, "[情報]" )					非表示の情報
+#	X :	gVal.OBJ_L.Log( "X", wRes )								テスト用ログ
 #
 #####################################################
 
+from ktime import CLS_TIME
 from osif import CLS_OSIF
 from filectrl import CLS_File
+from mysql_com import CLS_MySQL_Com
 from gval import gVal
 #####################################################
 class CLS_Mylog():
@@ -46,10 +50,12 @@ class CLS_Mylog():
 		"S"			: "",
 		"SC"		: "",
 		"SR"		: "",
-		"R"			: "",
-		"RC"		: "",
-		"RR"		: "",
-		"T"			: "",
+		"U+"		: "",
+		"U-"		: "",
+		"UC"		: "",
+		"UR"		: "",
+		"TS"		: "",
+		"TU"		: "",
 		
 		"P"			: "",
 		"N"			: "",
@@ -81,14 +87,14 @@ class CLS_Mylog():
 #####################################################
 # ロギング
 #####################################################
-###	def Log( self, inLevel, inRes, inText=None, inARR_Data=[], inViewConsole=DEF_VIEW_CONSOLE, inOutFile=DEF_OUT_FILE ):
 	def Log( self, inLevel, inRes, inText=None, inARR_Data=[], inID=None, inViewConsole=DEF_VIEW_CONSOLE, inOutFile=DEF_OUT_FILE ):
 		#############################
 		# ログ文字セット
 		wSTR_Log = {
-			"LogClass" : None,
-			"LogFunc"  : None,
-			"Reason"   : None }
+			"Class"  : None,
+			"Func"   : None,
+			"Reason" : None
+		}
 		
 		#############################
 		# ログレベルのチェック
@@ -107,88 +113,78 @@ class CLS_Mylog():
 		#############################
 		# ログクラスのチェック
 		if "Class" not in inRes :
-			wLogClass = "(none)"
+			wLogClass = gVal.DEF_NOTEXT
 		else:
 			wLogClass = inRes['Class']
 		
 		if wLogClass==None or wLogClass=="" :
-			wLogClass = "(none)"
+			wLogClass = gVal.DEF_NOTEXT
 		
 		#############################
 		# ログファンクのチェック
 		if "Func" not in inRes :
-			wLogFunc = "(none)"
+			wLogFunc = gVal.DEF_NOTEXT
 		else:
 			wLogFunc = inRes['Func']
 		
 		if wLogFunc==None or wLogFunc=="" :
-			wLogFunc = "(none)"
+			wLogFunc = gVal.DEF_NOTEXT
 		
 		#############################
 		# 理由のチェック
 		if inText!=None :
 			wReason = str( inText )
 		elif "Reason" not in inRes :
-			wReason = "(none)"
+			wReason = gVal.DEF_NOTEXT
 		else:
 			wReason = str( inRes['Reason'] )
 		
-		if wReason=="None" or wReason=="" :
-			wReason = "(none)"
+		if wReason==None or  wReason=="None" or wReason=="" :
+			wReason = gVal.DEF_NOTEXT
 		### ' を　'' に置き換える
 		wReason = wReason.replace( "'", "''" )
 		
 		#############################
 		# 構造体に突っ込む
-		wSTR_Log['LogClass'] = wLogClass
-		wSTR_Log['LogFunc'] = wLogFunc
+		wSTR_Log['Class']  = wLogClass
+		wSTR_Log['Func']   = wLogFunc
 		wSTR_Log['Reason'] = wReason
 		
 		#############################
 		# 時間を取得
-		wTD = CLS_OSIF.sGetTime()
-		### wTD['TimeDate']
-		if wTD['Result']!=True :
+		wSubRes = CLS_TIME.sTimeUpdate( wSTR_Log )
+		if wSubRes['Result']!=True :
 			###時間取得失敗  時計壊れた？
-			CLS_OSIF.sPrn( "CLS_Mylog: Log: PC時間の取得に失敗しました" )
-			wCHR_TimeDate = "1901-01-01 00:00:00"
-			
-			###いちおデータベースにも記録する
-			wQy = "insert into tbl_log_data values ("
-			wQy = wQy + "'" + gVal.STR_UserInfo['Account'] + "',"
-			wQy = wQy + "'" + wCHR_TimeDate + "',"
-			wQy = wQy + "'C',"
-			wQy = wQy + "'CLS_Mylog',"
-			wQy = wQy + "'Log',"
-			wQy = wQy + "'CLS_OSIF.sGetTime is failed' "
-			wQy = wQy + ") ;"
-			
-			wResDB = gVal.OBJ_DB_IF.RunQuery( wQy, False )
-			if wResDB['Result']!=True :
-				wRes['Reason'] = "Run Query is failed"
-				gVal.OBJ_L.Log( "C", wRes )
+			wRes['Reason'] = "Function is failed: CLS_TIME.sTimeUpdate: " + CLS_OSIF.sCatErr( wSTR_Log )
+			CLS_OSIF.sErr( wRes )
+			return wRes
 		
-		else:
-			wCHR_TimeDate = str(wTD['TimeDate'])
+		wCHR_TimeDate = CLS_TIME.sGet()
+		wCHR_TimeDate = str( wCHR_TimeDate )
 		
 		#############################
 		# データベースに記録する
-		wQy = "insert into tbl_log_data values ("
+		wQy = "insert into " + CLS_MySQL_Com.DEF_MYSQL_LOG_TABLE_NAME + " values ("
 		wQy = wQy + "'" + gVal.STR_UserInfo['Account'] + "',"
 		wQy = wQy + "'" + wCHR_TimeDate + "',"
 		wQy = wQy + "'" + wLevel + "',"
-		wQy = wQy + "'" + wSTR_Log['LogClass'] + "',"
-		wQy = wQy + "'" + wSTR_Log['LogFunc'] + "',"
-		wQy = wQy + "'" + wSTR_Log['Reason'] + "' "
-		if (wLevel=="R" or wLevel=="RC" or wLevel=="RR" ) and inID!=None :
-			wQy = wQy + ", '" + str(inID) + "' "
+		wQy = wQy + "'" + wSTR_Log['Class']  + "', "
+		wQy = wQy + "'" + wSTR_Log['Func']   + "', "
+		wQy = wQy + "'" + wSTR_Log['Reason'] + "', "
+###		if (wLevel=="U+" or wLevel=="U-" or wLevel=="UC" or wLevel=="UR" or wLevel=="TU" ) and inID!=None :
+		if (wLevel=="U+" or wLevel=="U-" or wLevel=="UC" or wLevel=="UR" or wLevel=="TU" or wLevel=="P" ) and inID!=None :
+			wQy = wQy + "'" + str(inID) + "' "
+		else:
+			wQy = wQy + "'' "
 		wQy = wQy + ") ;"
 		
-		wResDB = gVal.OBJ_DB_IF.RunQuery( wQy, False )
-		if wResDB['Result']!=True :
-			wRes['Reason'] = "Run Query is failed"
-			gVal.OBJ_L.Log( "C", wRes )
-			##以後の記録処理は継続する
+		### クエリ実行
+		wSubRes = gVal.OBJ_DB_IF.RunQuery( wQy, inFLGtraffic=False )
+		if wSubRes['Result']!=True :
+			###失敗
+			wStr = "Function is failed: RunQuery"
+			CLS_OSIF.sErr( wRes )
+			return wRes
 		
 		#############################
 		# ログの組み立て
@@ -199,14 +195,14 @@ class CLS_Mylog():
 			wLevelTag = wLevel + " " * wNumSpace
 		
 		if ( wLevel=="S" or wLevel=="SC" or wLevel=="SR" or \
-		     wLevel=="R" or wLevel=="RC" or wLevel=="RR" or \
-		     wLevel=="T" or wLevel=="N" ) \
+		     wLevel=="U+" or wLevel=="U-" or wLevel=="UC" or wLevel=="UR" or \
+		     wLevel=="TS" or wLevel=="TU" or wLevel=="N" ) \
 		   and inText!=None :
 			wOutLog = wLevelTag + ": " + wSTR_Log['Reason']
 		else:
 			wOutLog = wLevelTag + ": "
-			wOutLog = wOutLog + wSTR_Log['LogClass'] + ": "
-			wOutLog = wOutLog + wSTR_Log['LogFunc'] + ": "
+			wOutLog = wOutLog + wSTR_Log['Class'] + ": "
+			wOutLog = wOutLog + wSTR_Log['Func'] + ": "
 			wOutLog = wOutLog + wSTR_Log['Reason']
 		
 		#############################
@@ -232,13 +228,13 @@ class CLS_Mylog():
 		
 		### S・SC・SR・TS（運用ログ・トラヒック）
 		###   =テキストが設定されていれば表示
-		elif wLevel=="S" or wLevel=="SC" or wLevel=="SR" or wLevel=="T" :
+		elif wLevel=="S" or wLevel=="SC" or wLevel=="SR" or wLevel=="TS" :
 			if  inText!=None :
 				wFLG_View = True
 		
-		### R・RC・RR（ユーザ操作）
+		### U+・U-・UC・UR・TU（ユーザ操作）
 		###   =表示
-		elif wLevel=="R" or wLevel=="RC" or wLevel=="RR" :
+		elif wLevel=="U+" or wLevel=="U-" or wLevel=="UC" or wLevel=="UR" or wLevel=="TU" :
 			wFLG_View = True
 		
 		### P・N（データベース操作・非表示の情報）
@@ -352,8 +348,11 @@ class CLS_Mylog():
 			wQy = wQy + "level = 'S' or "
 			wQy = wQy + "level = 'SC' or "
 			wQy = wQy + "level = 'SR' or "
-			wQy = wQy + "level = 'RR' or "
-			wQy = wQy + "level = 'T' or "
+			wQy = wQy + "level = 'U+' or "
+			wQy = wQy + "level = 'U-' or "
+			wQy = wQy + "level = 'UC' or "
+			wQy = wQy + "level = 'UR' or "
+			wQy = wQy + "level = 'TS' or "
 			wQy = wQy + "level = 'P' or "
 			wQy = wQy + "level = 'N' "
 			wQy = wQy + ") and "
@@ -367,8 +366,9 @@ class CLS_Mylog():
 			wQy = wQy + "( "
 			wQy = wQy + "level = 'S' or "
 			wQy = wQy + "level = 'SC' or "
-			wQy = wQy + "level = 'SR' or "
-			wQy = wQy + "level = 'RR' or "
+			wQy = wQy + "level = 'U+' or "
+			wQy = wQy + "level = 'U-' or "
+			wQy = wQy + "level = 'UC' or "
 			wQy = wQy + "level = 'N' "
 			wQy = wQy + ") and "
 			wQy = wQy + "( regdate > now() - interval '2 week' ) "
@@ -403,8 +403,11 @@ class CLS_Mylog():
 			wQy = "select * from tbl_log_data where "
 			wQy = wQy + "twitterid = '" + gVal.STR_UserInfo['Account'] + "' and "
 			wQy = wQy + "( "
-			wQy = wQy + "level = 'R' or "
-			wQy = wQy + "level = 'RC' "
+			wQy = wQy + "level = 'U+' or "
+			wQy = wQy + "level = 'U-' or "
+			wQy = wQy + "level = 'UC' or "
+			wQy = wQy + "level = 'UR' or "
+			wQy = wQy + "level = 'TU' "
 			wQy = wQy + ") and "
 			wQy = wQy + "( regdate > now() - interval '2 week' ) "
 			wQy = wQy + "order by regdate DESC ;"
@@ -422,7 +425,7 @@ class CLS_Mylog():
 			wQy = wQy + "( regdate > now() - interval '2 week' ) "
 			wQy = wQy + "order by regdate DESC ;"
 		
-		wResDB = gVal.OBJ_DB_IF.RunQuery( wQy, False )
+		wResDB = gVal.OBJ_DB_IF.RunQuery( wQy )
 		if wResDB['Result']!=True :
 			wRes['Reason'] = "Run Query is failed"
 			gVal.OBJ_L.Log( "B", wRes )
@@ -459,8 +462,8 @@ class CLS_Mylog():
 			else:
 				### ユーザ記録以外
 				wLine = wTD + " " + wARR_Log[wKey]['level'] + " "
-				wLine = wLine + "[" + wARR_Log[wKey]['log_class'] + "] "
-				wLine = wLine + "[" + wARR_Log[wKey]['log_func'] + "]"
+				wLine = wLine + "[" + wARR_Log[wKey]['class'] + "] "
+				wLine = wLine + "[" + wARR_Log[wKey]['func'] + "]"
 				CLS_OSIF.sPrn( wLine )
 				
 				wLine = wBlank + wARR_Log[wKey]['reason']
@@ -620,7 +623,7 @@ class CLS_Mylog():
 			wQy = wQy + "not level = 'RC' ) "
 			wQy = wQy + ";"
 		
-		wResDB = gVal.OBJ_DB_IF.RunQuery( wQy, False )
+		wResDB = gVal.OBJ_DB_IF.RunQuery( wQy )
 		if wResDB['Result']!=True :
 			wRes['Reason'] = "Run Query is failed"
 			gVal.OBJ_L.Log( "B", wRes )

@@ -1,9 +1,9 @@
 #!/usr/bin/python
 # coding: UTF-8
 #####################################################
-# ::Project  : Korei Bot Win
+# ::Project  : Korei Bot Misskey
 # ::Admin    : Korei (@korei-xlix)
-# ::github   : https://github.com/korei-xlix/koreibot_win/
+# ::github   : https://github.com/korei-xlix/koreibot_misskey/
 # ::Class    : グローバル値
 #####################################################
 
@@ -16,53 +16,96 @@ class gVal() :
 	DEF_MOJI_ENCODE = 'utf-8'								#文字エンコード
 
 #############################
-# システム情報
-	#データversion(文字)
-	DEF_CONFIG_VER = "1"
+# ※テストログ表示※
+	FLG_Test = True		# テストログ表示
+###	FLG_Test = False	# テストログ非表示
 
+
+
+#############################
+# ユーザ情報
+	STR_UserInfo = {
+		"Account"		: None,			# misskeyアカウント名
+		"ID"			: None,			# misskey ID番号(トークン取得)
+		"URL"			: None,			# misskeyストリームURL(+トークン)
+		"Host"			: None,			# misskey ホスト名
+		
+		"DB_HOST"		: None,			# DB ホスト名
+		"DB_NAME"		: None,			# DB データベース名
+		"DB_USER"		: None,			# DB ユーザ名
+		"DB_PASS"		: None,			# DB パスワード
+
+	}
+
+
+
+#############################
+# システム情報
 	STR_SystemInfo = {
-		"Client_Name"	: "これーぼっと",
+		"ClientName"	: "Korei Bot",
 		"github"		: "",
 		"Admin"			: "",
 		"PythonVer"		: 0,
 		"HostName"		: "",
 		
-		"EXT_FilePath"	: None,
-		
-		"RunMode"		: "normal"
-			# normal= 通常モード
-			# setup = セットアップモード
-			# init  = 全初期化モード
-			# clear = データクリア
+		"RunMode"		: None
+			# run    = 通常モード
+			# init   = 初期化モード
+			# cleate = 登録モード
 	}
+
+
+
+#############################
+# システム情報
+###	#データversion(文字)
+###	DEF_CONFIG_VER = "1"
+###
+###	STR_SystemInfo = {
+###		"Client_Name"	: "これーぼっと",
+###		"github"		: "",
+###		"Admin"			: "",
+###		"PythonVer"		: 0,
+###		"HostName"		: "",
+###		
+###		"EXT_FilePath"	: None,
+###		
+###		"RunMode"		: "normal"
+###			# normal= 通常モード
+###			# setup = セットアップモード
+###			# init  = 全初期化モード
+###			# clear = データクリア
+###	}
+###
 
 #############################
 # ユーザ情報
-	STR_UserInfo = {
-		"Account"		: "",			#Twitterアカウント名
-		"id"			: "",			#Twitter ID(番号)
-		
-		"TrendTag"		: "",			#トレンドタグ設定
-		"QuestionTag"	: "",			#質問タグ設定
-		"VipTag"		: "",			#VIPリツイート 対象タグ
-		"DelTag"		: "",			#削除ツイート  対象タグ
-		
-		"ListID"		: None,			#リスト通知 リストID
-		"ListName"		: None,			#リスト通知 リスト名
-		
-		"AutoRemove"	: False,		#自動リムーブ True=有効
-		"mListID"		: None,			#相互フォローリスト リストID
-		"mListName"		: None,			#相互フォローリスト リスト名
-		"fListID"		: None,			#片フォロワーリスト リストID
-		"fListName"		: None,			#片フォロワーリスト リスト名
-		
-		"Traffic"		: False,		#Twitterにトラヒックを報告するか
-		
-		"AutoSeq"		: 0,			#自動監視シーケンス
-		
-		"mfvstop"		: False,		#相互いいね停止 true=有効
-		"mfvstop_date"	: None			#相互いいね停止 開始日
-	}
+###	STR_UserInfo = {
+###		"Account"		: "",			#Twitterアカウント名
+###		"id"			: "",			#Twitter ID(番号)
+###		
+###		"TrendTag"		: "",			#トレンドタグ設定
+###		"QuestionTag"	: "",			#質問タグ設定
+###		"VipTag"		: "",			#VIPリツイート 対象タグ
+###		"DelTag"		: "",			#削除ツイート  対象タグ
+###		
+###		"ListID"		: None,			#リスト通知 リストID
+###		"ListName"		: None,			#リスト通知 リスト名
+###		
+###		"AutoRemove"	: False,		#自動リムーブ True=有効
+###		"mListID"		: None,			#相互フォローリスト リストID
+###		"mListName"		: None,			#相互フォローリスト リスト名
+###		"fListID"		: None,			#片フォロワーリスト リストID
+###		"fListName"		: None,			#片フォロワーリスト リスト名
+###		
+###		"Traffic"		: False,		#Twitterにトラヒックを報告するか
+###		
+###		"AutoSeq"		: 0,			#自動監視シーケンス
+###		
+###		"mfvstop"		: False,		#相互いいね停止 true=有効
+###		"mfvstop_date"	: None			#相互いいね停止 開始日
+###	}
+###
 
 #############################
 # 時間情報
@@ -392,7 +435,7 @@ class gVal() :
 		"(dummy)"				: 0
 	}
 
-	DEF_DISPPATH = "script/disp/"
+	DEF_DISPPATH = "disp/"
 
 	DEF_STR_DISPFILE = {
 		"MainConsole"			: DEF_DISPPATH + "main_console.disp",
@@ -423,18 +466,26 @@ class gVal() :
 	DEF_VAL_DAY  = 86400									# 時間経過: 1日  60x60x24
 	DEF_VAL_WEEK = 604800									# 時間経過: 7日  (60x60x24)x7
 	
-	DEF_TIMEDATE = "1901-01-01 00:00:00"
+###	DEF_TIMEDATE = "1901-01-01 00:00:00"
+	DEF_TIMEDATE = "2001-01-01 00:00:00"
 	DEF_NOTEXT   = "(none)"
+	DEF_ROOT_USER_NAME = "root"
 
 	DEF_ADMINLOG_POINT = 12
 
 #############################
 # 変数
-	FLG_Test_Mode    = False								#テストモード有無
 	
-	OBJ_Tw_IF = ""											#Twitter I/F
+	OBJ_MAIN = ""											#メインスレッド用
+	OBJ_L    = ""											#ログ用
+
 	OBJ_DB_IF = ""											#DB I/F
-	OBJ_L     = ""											#ログ用
+	OBJ_Misskey_IF = ""										#Misskey I/F
+
+
+
+
+	OBJ_Tw_IF = ""											#Twitter I/F
 	
 	ARR_ExeWord = {}										# 除外文字データ
 	ARR_ExeWordKeys = []
