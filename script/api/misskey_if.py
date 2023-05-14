@@ -14,6 +14,99 @@ from misskey import Misskey
 from osif import CLS_OSIF
 from gval import gVal
 from misskey_com import CLS_Misskey_Com
+
+
+###async def Async_dummy():
+###	print("OK")
+###	await asyncio.sleep(10)
+
+#####################################################
+# 非同期 受信処理
+#####################################################
+async def Async_Receive():
+	#############################
+	# 応答形式の取得
+	#   "Result" : False, "Class" : None, "Func" : None, "Reason" : None, "Responce" : None
+	wRes = CLS_OSIF.sGet_Resp()
+	wRes['Class'] = "CLS_Misskey_IF"
+	wRes['Func']  = "Async_Receive"
+	
+##	#############################
+##	# ループの表示
+##	wLoop = asyncio.get_running_loop()
+##	if gVal.FLG_Test==True :
+##		CLS_OSIF.sPrn( " now loops: " + str( wLoop ) )
+##	
+	#############################
+	# 受信処理
+	async with websockets.connect( gVal.STR_UserInfo['URL'] ) as ws:
+		await ws.send(json.dumps({
+		   "type": "connect",
+		   "body": {
+		     "channel": "homeTimeline",
+		     "id": "test"
+		}
+	}))
+	
+	#############################
+	# 受信データの表示
+	while True:
+###		wData = json.loads(await ws.recv())
+		wData = await ws.recv()
+		
+		### ノート単位に表示する
+		if wData['type'] == 'channel':
+			if wData['body']['type'] == 'note':
+				wNote = wData['body']['body']
+				await __async_OnNote( wNote )
+		
+		### フォローされたら、フォローする
+		if wData['body']['type'] == 'followed':
+			wUser = wData['body']['body']
+			await __async_Followed( wUser )
+	
+	#############################
+	# 完了
+	wRes['Result'] = True
+	return wRes
+
+#####################################################
+# 非同期：ノート単位の表示
+#####################################################
+async def __async_OnNote( inNote ):
+	#############################
+	# 応答形式の取得
+	#   "Result" : False, "Class" : None, "Func" : None, "Reason" : None, "Responce" : None
+	wRes = CLS_OSIF.sGet_Resp()
+	wRes['Class'] = "CLS_Misskey_IF"
+	wRes['Func']  = "__async_OnNote"
+	
+	if inNote.get('mentions'):
+		if gVal.STR_UserInfo['ID'] in inNote['mentions']:
+			self.OBJ_Misskey.notes_create(text='呼んだ？', replyId=inNote['id'])
+	
+	return
+
+#####################################################
+# 非同期：フォローする
+#####################################################
+async def __async_Followed( inUser ):
+	#############################
+	# 応答形式の取得
+	#   "Result" : False, "Class" : None, "Func" : None, "Reason" : None, "Responce" : None
+	wRes = CLS_OSIF.sGet_Resp()
+	wRes['Class'] = "CLS_Misskey_IF"
+	wRes['Func']  = "__async_Followed"
+	
+	try:
+		self.OBJ_Misskey.following_create( inUser['id'] )
+	except:
+		pass
+
+	return
+
+
+
 #####################################################
 class CLS_Misskey_IF() :
 #####################################################
@@ -22,12 +115,13 @@ class CLS_Misskey_IF() :
 	STR_Status = {				# misskey状態
 		"FLG_Con"	: False,	# 接続  True=接続確認済
 
+		"FLG_Rec"	: False,	# 受信処理  True=受信中
 
-		"FLG_Open"	: False,	# DB状態の返送
-		
-		"Result"	: False,	# Result
-		"Reason"	: None,		# エラー理由
-		"Data"		: None		# 結果応答
+###		"FLG_Open"	: False,	# DB状態の返送
+###		
+###		"Result"	: False,	# Result
+###		"Reason"	: None,		# エラー理由
+###		"Data"		: None		# 結果応答
 		
 	}
 
@@ -92,9 +186,7 @@ class CLS_Misskey_IF() :
 		
 		#############################
 		# ユーザ情報の設定
-###		gVal.STR_UserInfo['Account'] = inAccount
 		gVal.STR_UserInfo['ID']   = wID
-###		gVal.STR_UserInfo['Host'] = inHost
 		gVal.STR_UserInfo['URL']  = WS_URL
 		
 		#############################
@@ -107,6 +199,7 @@ class CLS_Misskey_IF() :
 			CLS_OSIF.sPrn( wStr )
 		
 		self.STR_Status['FLG_Con'] = True
+		self.STR_Status['FLG_Rec'] = False
 		#############################
 		# 完了
 		wRes['Result'] = True
@@ -114,56 +207,76 @@ class CLS_Misskey_IF() :
 
 
 
-'''
-	async def runner():
-		async with websockets.connect(WS_URL) as ws:
-			await ws.send(json.dumps({
-			   "type": "connect",
-			   "body": {
-			     "channel": "homeTimeline",
-			     "id": "test"
-			}
-		}))
-		while True:
-			data = json.loads(await ws.recv())
-			print(data)
+	#####################################################
+	# 非同期：受信処理 開始
+	#####################################################
+	def Async_StartReceive(self):
+		#############################
+		# 応答形式の取得
+		#   "Result" : False, "Class" : None, "Func" : None, "Reason" : None, "Responce" : None
+		wRes = CLS_OSIF.sGet_Resp()
+		wRes['Class'] = "CLS_Misskey_IF"
+		wRes['Func']  = "Async_StartReceive"
+		
+		#############################
+		# 受信中か？
+		if self.STR_Status['FLG_Rec']==True :
+			### 受信中は処理しない
+			return wRes
+		
+		#############################
+		# 非同期ループタスクの作成
+		
+		### new loop
+		wNewLoop = asyncio.new_event_loop()
+		wLoop = asyncio.set_event_loop( wNewLoop )
+		if gVal.FLG_Test==True :
+			CLS_OSIF.sPrn( "+new loop: " + str( wNewLoop ) )
+		
+		### 受信関数コルーチンの起動
+		wNewLoop.run_until_complete( Async_Receive() )
+		wNewLoop.run_forever()
+		
+		#############################
+		# 受信中
+		self.STR_Status['FLG_Rec'] = True
+		
+		#############################
+		# 完了
+		wRes['Result'] = True
+		return wRes
 
-
-
-   if data['type'] == 'channel':
-    if data['body']['type'] == 'note':
-     note = data['body']['body']
-     await on_note(note)
-
-    if data['body']['type'] == 'followed':
-     user = data['body']['body']
-     await on_follow(user)
-
-
-
-async def on_note(note):
- if note.get('mentions'):
-  if MY_ID in note['mentions']:
-   msk.notes_create(text='呼んだ？', replyId=note['id'])
-
-
-
-async def on_follow(user):
- try:
-  msk.following_create(user['id'])
- except:
-  pass
-
-
-
-asyncio.get_event_loop().run_until_complete(runner())
-
-
-'''
-
-
-
-
+	#####################################################
+	# 非同期：受信処理 停止
+	#####################################################
+	def Async_StopReceive(self):
+		#############################
+		# 応答形式の取得
+		#   "Result" : False, "Class" : None, "Func" : None, "Reason" : None, "Responce" : None
+		wRes = CLS_OSIF.sGet_Resp()
+		wRes['Class'] = "CLS_Misskey_IF"
+		wRes['Func']  = "Async_StartReceive"
+		
+		#############################
+		# 未受信か？
+		if self.STR_Status['FLG_Rec']==False :
+			### 未受信時は処理しない
+			return wRes
+		
+		#############################
+		# 非同期ループタスクの停止
+		wLoop = asyncio.get_event_loop()
+		wLoop.stop()
+		wLoop.close()
+		
+		#############################
+		# 未受信
+		self.STR_Status['FLG_Rec'] = False
+		
+		#############################
+		# 完了
+		wRes['Result'] = True
+		return wRes
 
 
 

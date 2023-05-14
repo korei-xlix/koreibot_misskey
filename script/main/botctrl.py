@@ -76,7 +76,16 @@ class CLS_BotCtrl():
 				return wRes
 			
 			gVal.STR_SystemInfo['RunMode'] = wArg[1]
-			gVal.STR_UserInfo['Account']   = wArg[2]
+###			gVal.STR_UserInfo['Account']   = wArg[2]
+			wSubRes = CLS_OSIF.sRe_Split( inPatt="@", inCont=wArg[2] )
+			if wSubRes['Result']!=True or len(wSubRes['After'])!=2 :
+				wRes['Reason'] = "not input misskey account arguments(2)= " + str( wArg )
+				CLS_OSIF.sErr( wRes )
+				return wRes
+			
+			gVal.STR_UserInfo['Account'] = wSubRes['After'][0]
+			gVal.STR_UserInfo['Host']    = wSubRes['After'][1]
+			
 			gVal.STR_UserInfo['DB_HOST']   = wArg[3]
 			gVal.STR_UserInfo['DB_NAME']   = wArg[4]
 			gVal.STR_UserInfo['DB_USER']   = wArg[5]

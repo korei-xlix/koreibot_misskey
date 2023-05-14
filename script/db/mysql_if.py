@@ -183,19 +183,8 @@ class CLS_MySQL_IF() :
 		wCommand = wSubRes['After']
 		wRes['Responce']['Command'] = wCommand
 		
-###		wFLG_Commit = False
-###		#############################
-###		# commitが必要なコマンド
-###		if wCommand=="create" or \
-###		   wCommand=="insert" or \
-###		   wCommand=="update" or \
-###		   wCommand=="delete" or \
-###		   wCommand=="drop" :
-###			wFLG_Commit = True
-###		
 		#############################
 		# 実行
-###		wResDB = self.OBJ_MySQL.RunQuery( inQuery=inQuery, inCommand=wCommand, inCommit=wFLG_Commit )
 		wResDB = self.OBJ_MySQL.RunQuery( inQuery=inQuery, inCommand=wCommand )
 		
 		### 結果判定
@@ -240,14 +229,14 @@ class CLS_MySQL_IF() :
 	# 辞書型に整形
 	def ChgDict( self, inData ):
 		wARR_DBData = {}
-		self.OBJ_DB.ChgDict( inData['Collum'], inData['Data'], outDict=wARR_DBData )
+		self.OBJ_MySQL.ChgDict( inData['Collum'], inData['Data'], outDict=wARR_DBData )
 		return wARR_DBData
 
 	#####################################################
 	# リスト型に整形
 	def ChgList( self, inData ):
 		wARR_DBData = []
-		self.OBJ_DB.ChgList( inData['Data'], outList=wARR_DBData )
+		self.OBJ_MySQL.ChgList( inData['Data'], outList=wARR_DBData )
 		return wARR_DBData
 
 	#####################################################
@@ -287,18 +276,6 @@ class CLS_MySQL_IF() :
 		# クエリの作成
 		wQy = "select count(*) from " + inTableName + ";"
 		
-###		#############################
-###		# 実行
-###		wResDB = self.OBJ_DB.RunQuery( wQy )
-###		
-###		#############################
-###		# 実行結果の取得
-###		wResDB = self.OBJ_DB.GetQueryStat()
-###		if wResDB['Result']!=True :
-###			##失敗
-###			wRes['Reason'] = "Run Query is failed: RunFunc=" + wResDB['RunFunc'] + " reason=" + wResDB['Reason'] + " query=" + wResDB['Query']
-###			gVal.OBJ_L.Log( "C", wRes )
-###			return wRes
 		wResDB = self.OBJ_MySQL.RunQuery( inQuery=inQuery, inCommand="select" )
 		
 		### 結果判定
@@ -321,7 +298,6 @@ class CLS_MySQL_IF() :
 		
 		#############################
 		# 正常
-###		wRes['Responce'] = wNum
 		wRes['Result'] = True
 		return wRes
 
@@ -432,7 +408,8 @@ class CLS_MySQL_IF() :
 	#####################################################
 	# TBL_USER：取得
 	#####################################################
-	def USER_Get( self, inID ):
+###	def USER_Get( self, inID ):
+	def USER_Get( self, inID, inHost ):
 		#############################
 		# 応答形式の取得
 		#   "Result" : False, "Class" : None, "Func" : None, "Reason" : None, "Responce" : None
@@ -442,8 +419,10 @@ class CLS_MySQL_IF() :
 		
 		#############################
 		# 既登録情報の取得
-		wQy = "select * from tbl_user_data where "
-		wQy = wQy + "id = '" + inUserData['Account'] + "' ;"
+		wQy = "select * from tbl_user where "
+###		wQy = wQy + "id = '" + inUserData['Account'] + "' ;"
+		wQy = wQy + "id = '" + str( inID ) + "' and "
+		wQy = wQy + "host = '" + str( inHost ) + "' ;"
 		
 		### クエリ実行
 		wSubRes = self.RunQuery( inQuery=wQy )
@@ -463,19 +442,25 @@ class CLS_MySQL_IF() :
 		
 		#############################
 		# 1個以外はありえない
-		if len(wSubRes['Responce']['Data'])!=1 :
+		if len(wSubRes['Data'])!=1 :
 			wRes['Reason'] = "Function is failed: User is not exist: id=" + str(inID)
 			gVal.OBJ_L.Log( "D", wRes )
 			return wRes
 		
-		wRes['Responce'] = wSubRes['Responce']['Data'][0]
+###		#############################
+###		# 辞書型に整形
+###		wData = self.ChgDict( wSubRes['Data'] )
+###		
+		#############################
+		# ユーザ名の登録
+		gVal.STR_UserInfo['Account'] = inID
+		gVal.STR_UserInfo['Host']    = inHost
+		
+		wRes['Responce'] = wSubRes['Data'][0]
 		#############################
 		# =正常
 		wRes['Result'] = True
 		return wRes
-
-
-
 
 
 

@@ -129,17 +129,13 @@ class CLS_MySQL_Use() :
 #####################################################
 # クエリ実行
 #####################################################
-###	def RunQuery( self, inQuery=None, inCommand=None, inCommit=True, inStatus=True ):
 	def RunQuery( self, inQuery=None, inCommand=None ):
 		
-###		if inStatus==True :
-###			self.STR_Status['Result'] = False
 		self.STR_Status['Result'] = False
 		#############################
 		# クエリ実行＆コミット
 		try:
 			self.OBJ_MySQL_cur.execute( inQuery )
-###			if inCommit==True :
 			if inCommand=="create" or \
 			   inCommand=="insert" or \
 			   inCommand=="update" or \
@@ -149,7 +145,6 @@ class CLS_MySQL_Use() :
 			
 			#############################
 			# selectの場合、結果を返送する
-###			if inCommand=="select" :
 			elif inCommand=="select" :
 				self.STR_Status['Data'] = []
 				wData = self.OBJ_MySQL_cur.fetchall()
@@ -163,10 +158,52 @@ class CLS_MySQL_Use() :
 		
 		#############################
 		# 正常処理
-###		if inStatus==True :
-###			self.STR_Status['Result'] = True
 		self.STR_Status['Result'] = True
 		return True
 
 
 
+#####################################################
+# クエリ結果をリスト型に取りだす
+#   ※共通フル取得
+#####################################################
+	def ChgList( self, inData, outList=[] ):
+		if len( inData )==0 :
+			return False
+		
+		wList = outList
+		#############################
+		# カウント値の取り出し
+		for wLineTap in inData :
+			wGetTap = []
+			for wCel in wLineTap :
+				wGetTap.append( wCel )
+			wList.extend( wGetTap )
+		
+		return True
+
+
+
+#####################################################
+# クエリ結果を辞書型に取りだす
+#   ※共通フル取得
+#####################################################
+	def ChgDict( self, inCollum, inData, outDict={} ):
+		if len( inData )==0 :
+			return False
+		
+		wDict = outDict
+		wIndex = 0
+		#############################
+		# カウント値の取り出し
+		for wLineTap in inData :
+			wGetTap = {}
+			wC_Index = 0
+			for wCel in wLineTap :
+				wGetTap.update({ inCollum[wC_Index] : wCel })
+				wC_Index += 1
+			
+			wDict.update({ wIndex : wGetTap })
+			wIndex += 1
+		
+		return True

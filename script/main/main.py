@@ -29,19 +29,22 @@ class CLS_Main() :
 #####################################################
 
 										## スレッド実行間隔(秒)
-	DEF_TIMELINE_ROOP = 60
+###	DEF_TIMELINE_ROOP = 60
 	DEF_REACTION_ROOP = 60
 
-	VAL_Timeline_Roop = 0
+###	VAL_Timeline_Roop = 0
 	VAL_Reaction_Roop = 0
 
 										## スレッド停止フラグ
-	FLG_Timeline_EndRoop = False
-	FLG_Reaction_EndRoop = False
+###	FLG_Timeline_EndRoop = False
+	FLG_Reaction_EndRoop = False		#
 
-	TRD_Timeline = None					## タイムラインスレッド用
+###	TRD_Timeline = None					## タイムラインスレッド用
 	TRD_Reaction = None					## リアクションスレッド用
 	TRD_Main     = None					## メインスレッド用
+
+										## 非同期 受信処理
+	FLG_Receive = False					#  True=受信中、False=未受信
 
 	ARR_Reaction = {}					## 受信リアクション
 
@@ -103,13 +106,13 @@ class CLS_Main() :
 			
 			#############################
 			# スレッド起動
-			self.TRD_Timeline = threading.Thread(target=self.ThreadTimeline)
+###			self.TRD_Timeline = threading.Thread(target=self.ThreadTimeline)
 			self.TRD_Reaction = threading.Thread(target=self.ThreadReaction)
 			self.TRD_Main     = threading.Thread(target=self.ThreadMain)
-			self.TRD_Timeline.start()
+###			self.TRD_Timeline.start()
 			self.TRD_Reaction.start()
 			self.TRD_Main.start()
-			self.TRD_Timeline.join()
+###			self.TRD_Timeline.join()
 			self.TRD_Reaction.join()
 			self.TRD_Main.join()
 		
@@ -289,20 +292,6 @@ class CLS_Main() :
 			
 			break #登録ループ終了
 		
-
-
-
-
-
-
-
-
-
-
-#		CLS_OSIF.sPrn( "*** 登録モード終了 ***" )
-#		exit()
-
-
 		#############################
 		# ユーザをデータベースに登録する
 		wSubRes = gVal.OBJ_DB_IF.USER_Regist( inID=wSTR_UserInfo['account'], inHost=wSTR_UserInfo['host'], inToken=wSTR_UserInfo['token'] )
@@ -344,15 +333,52 @@ class CLS_Main() :
 		if gVal.FLG_Test==True :
 			CLS_OSIF.sPrn( "stsrt: ThreadMain" )
 		
+		gVal.OBJ_L = CLS_Mylog()
+		#############################
+		# DB接続
+		gVal.OBJ_DB_IF = CLS_MySQL_IF( wRes, parentObj=self )
+		wSubRes = gVal.OBJ_DB_IF.Connect()
+		if wSubRes['Result']!=True :
+			###失敗
+			wRes['Reason'] = "Function is failed: Connect"
+			gVal.OBJ_L.Log( "D", wRes )
+			return wRes
+		
+		#############################
+		# ユーザ情報ロード
+		wSubRes = gVal.OBJ_DB_IF.USER_Get(
+			inID = gVal.STR_UserInfo['Account'],
+			inHost = gVal.STR_UserInfo['Host']
+		)
+		if wSubRes['Result']!=True :
+			###失敗
+			wRes['Reason'] = "Function is failed: OBJ_DB_IF.USER_Get"
+			gVal.OBJ_L.Log( "D", wRes )
+			return wRes
+		wToken = str( wSubRes['Responce']['token'] )
+		
+		#############################
+		# misskey接続
+		gVal.OBJ_Misskey_IF = CLS_Misskey_IF( wRes, parentObj=self )
+		
+		wSubRes = gVal.OBJ_Misskey_IF.Connect(
+				inAccount = gVal.STR_UserInfo['Account'],
+				inHost = gVal.STR_UserInfo['Host'],
+				inToken = wToken
+		)
+		if wSubRes['Result']!=True :
+			###失敗
+			wRes['Reason'] = "Function is failed: Connect"
+			gVal.OBJ_L.Log( "D", wRes )
+			return wRes
+		
 		#############################
 		# スレッドループ
 		while True :
-
-
+			#############################
+			# コンソール表示
 			wInput = CLS_MyDisp.sViewConsole()
-
-
-
+			
 			#############################
 			# スレッド停止コマンドか
 			#   Input異常
@@ -360,21 +386,44 @@ class CLS_Main() :
 			#   \\q
 			wFLG_Stop = False
 			# input異常か、exit
-			if wInput['Result']==False or wInput=="exit" :
+			if wInput['Result']==False or wInput['Responce']=="exit" :
 				wFLG_Stop = True	#停止
 			
 			# \\q
-			wSubRes = CLS_OSIF.sRe_Search( inPatt="\\\\q", inCont=wInput )
-			if wSubRes['Result']==False or wSubRes['Match']==True :
+			wSubRes = CLS_OSIF.sRe_Search( inPatt="\\\\q", inCont=wInput['Responce'] )
+###			if wSubRes['Result']==False or wSubRes['Match']==True :
+			if wSubRes['Match']==True :
 				wFLG_Stop = True	#停止
 			
 			if wFLG_Stop==True :
 				### 終了
 				if gVal.FLG_Test==True :
 					CLS_OSIF.sPrn( "stop: All Thread Stopping" )
-				self.FLG_Timeline_EndRoop = True
+###				self.FLG_Timeline_EndRoop = True
 				self.FLG_Reaction_EndRoop = True
 				break
+			
+			#############################
+			# 受信開始
+			#   \\r
+			wSubRes = CLS_OSIF.sRe_Search( inPatt="\\\\r", inCont=wInput['Responce'] )
+###			if wSubRes['Result']==False or wSubRes['Match']==True :
+			if wSubRes['Match']==True :
+				wSubRes = gVal.OBJ_Misskey_IF.Async_StartReceive()
+				if wSubRes['Result']==True :
+					CLS_OSIF.sPrn( "start: Async misskey Receive" )
+				continue
+			
+			#############################
+			# 受信停止
+			#   \\rs
+			wSubRes = CLS_OSIF.sRe_Search( inPatt="\\\\s", inCont=wInput['Responce'] )
+###			if wSubRes['Result']==False or wSubRes['Match']==True :
+			if wSubRes['Match']==True :
+				wSubRes = gVal.OBJ_Misskey_IF.Async_StopReceive()
+				if wSubRes['Result']==True :
+					CLS_OSIF.sPrn( "stop: Async misskey Receive" )
+				continue
 		
 		#############################
 		# スレッド終了表示
@@ -387,48 +436,48 @@ class CLS_Main() :
 #####################################################
 # タイムラインスレッド
 #####################################################
-	def ThreadTimeline( self ):
-		#############################
-		# 応答形式の取得
-		#   "Result" : False, "Class" : None, "Func" : None, "Reason" : None, "Responce" : None
-		wRes = CLS_OSIF.sGet_Resp()
-		wRes['Class'] = "CLS_Main"
-		wRes['Func']  = "ThreadTimeline"
-		
-		#############################
-		# スレッド開始表示
-		if gVal.FLG_Test==True :
-			CLS_OSIF.sPrn( "stsrt: ThreadTimeline" )
-		
-		self.FLG_Timeline_EndRoop = False
-		self.VAL_Timeline_Roop = 0
-		#############################
-		# スレッドループ
-		while True :
-			if self.FLG_Timeline_EndRoop==True :
-				break
-			
-			self.VAL_Timeline_Roop += 1
-			#############################
-			# 実行タイミングで、処理実行
-			if self.DEF_TIMELINE_ROOP<=self.VAL_Timeline_Roop :
-				CLS_OSIF.sPrn( "run: ThreadTimeline: XXX1" )
-
-
-
-
-				self.VAL_Timeline_Roop = 0
-			
-			### 実行間隔(秒)
-			CLS_OSIF.sSleep(1)
-		
-		#############################
-		# スレッド終了表示
-		if gVal.FLG_Test==True :
-			CLS_OSIF.sPrn( "end: ThreadTimeline" )
-		return
-
-
+###	def ThreadTimeline( self ):
+###		#############################
+###		# 応答形式の取得
+###		#   "Result" : False, "Class" : None, "Func" : None, "Reason" : None, "Responce" : None
+###		wRes = CLS_OSIF.sGet_Resp()
+###		wRes['Class'] = "CLS_Main"
+###		wRes['Func']  = "ThreadTimeline"
+###		
+###		#############################
+###		# スレッド開始表示
+###		if gVal.FLG_Test==True :
+###			CLS_OSIF.sPrn( "stsrt: ThreadTimeline" )
+###		
+###		self.FLG_Timeline_EndRoop = False
+###		self.VAL_Timeline_Roop = 0
+###		#############################
+###		# スレッドループ
+###		while True :
+###			if self.FLG_Timeline_EndRoop==True :
+###				break
+###			
+###			self.VAL_Timeline_Roop += 1
+###			#############################
+###			# 実行タイミングで、処理実行
+###			if self.DEF_TIMELINE_ROOP<=self.VAL_Timeline_Roop :
+###				CLS_OSIF.sPrn( "run: ThreadTimeline: XXX1" )
+###
+###
+###
+###
+###				self.VAL_Timeline_Roop = 0
+###			
+###			### 実行間隔(秒)
+###			CLS_OSIF.sSleep(1)
+###		
+###		#############################
+###		# スレッド終了表示
+###		if gVal.FLG_Test==True :
+###			CLS_OSIF.sPrn( "end: ThreadTimeline" )
+###		return
+###
+###
 
 #####################################################
 # リアクションスレッド

@@ -25,10 +25,10 @@ class gVal() :
 #############################
 # ユーザ情報
 	STR_UserInfo = {
-		"Account"		: None,			# misskeyアカウント名
-		"ID"			: None,			# misskey ID番号(トークン取得)
-		"URL"			: None,			# misskeyストリームURL(+トークン)
-		"Host"			: None,			# misskey ホスト名
+		"Account"		: None,			# misskeyアカウント名 (MySQL I/F)
+		"ID"			: None,			# misskey ID番号(トークン取得) (Misskey I/F)
+		"URL"			: None,			# misskeyストリームURL(+トークン) (Misskey I/F)
+		"Host"			: None,			# misskey ホスト名 (MySQL I/F)
 		
 		"DB_HOST"		: None,			# DB ホスト名
 		"DB_NAME"		: None,			# DB データベース名
