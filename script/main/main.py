@@ -29,7 +29,7 @@ class CLS_Main() :
 #####################################################
 
 										## スレッド実行間隔(秒)
-###	DEF_TIMELINE_ROOP = 60
+###	DEF_TIMELINE_ROOP = 5
 	DEF_REACTION_ROOP = 60
 
 ###	VAL_Timeline_Roop = 0
@@ -391,7 +391,6 @@ class CLS_Main() :
 			
 			# \\q
 			wSubRes = CLS_OSIF.sRe_Search( inPatt="\\\\q", inCont=wInput['Responce'] )
-###			if wSubRes['Result']==False or wSubRes['Match']==True :
 			if wSubRes['Match']==True :
 				wFLG_Stop = True	#停止
 			
@@ -406,25 +405,39 @@ class CLS_Main() :
 			#############################
 			# 受信開始
 			#   \\r
-			wSubRes = CLS_OSIF.sRe_Search( inPatt="\\\\r", inCont=wInput['Responce'] )
-###			if wSubRes['Result']==False or wSubRes['Match']==True :
+			wSubRes = CLS_OSIF.sRe_Search( inPatt="^\\\\r", inCont=wInput['Responce'] )
 			if wSubRes['Match']==True :
 				wSubRes = gVal.OBJ_Misskey_IF.Async_StartReceive()
-				if wSubRes['Result']==True :
-					CLS_OSIF.sPrn( "start: Async misskey Receive" )
 				continue
 			
 			#############################
-			# 受信停止
-			#   \\rs
-			wSubRes = CLS_OSIF.sRe_Search( inPatt="\\\\s", inCont=wInput['Responce'] )
-###			if wSubRes['Result']==False or wSubRes['Match']==True :
+			# ノート送信
+			#   \\s
+			wSubRes = CLS_OSIF.sRe_Search( inPatt="^\\\\s", inCont=wInput['Responce'] )
 			if wSubRes['Match']==True :
-				wSubRes = gVal.OBJ_Misskey_IF.Async_StopReceive()
-				if wSubRes['Result']==True :
-					CLS_OSIF.sPrn( "stop: Async misskey Receive" )
+				
+				wStr = "ノート送信(\\q=キャンセル) ? > "
+				wInput = CLS_OSIF.sInp( wStr )
+				if wInput==None or wInput=="" :
+					continue
+				wSubRes = CLS_OSIF.sRe_Search( inPatt="^\\\\q", inCont=wInput )
+				if wSubRes['Match']==True :
+					continue
+				
+				wSubRes = gVal.OBJ_Misskey_IF.SendNote( inText=wInput )
 				continue
-		
+			
+##			#############################
+##			# 受信停止
+##			#   \\rs
+##			wSubRes = CLS_OSIF.sRe_Search( inPatt="^\\\\s", inCont=wInput['Responce'] )
+##			if wSubRes['Match']==True :
+###				wSubRes = gVal.OBJ_Misskey_IF.Async_StopReceive()
+###				if wSubRes['Result']==True :
+###					CLS_OSIF.sPrn( "stop: Async misskey Receive" )
+##				wSubRes = gVal.OBJ_Misskey_IF.Async_StopReceive( inFLG_Stop=True )
+##				continue
+##		
 		#############################
 		# スレッド終了表示
 		if gVal.FLG_Test==True :
@@ -461,11 +474,8 @@ class CLS_Main() :
 ###			#############################
 ###			# 実行タイミングで、処理実行
 ###			if self.DEF_TIMELINE_ROOP<=self.VAL_Timeline_Roop :
-###				CLS_OSIF.sPrn( "run: ThreadTimeline: XXX1" )
-###
-###
-###
-###
+###				wSubRes = gVal.OBJ_Misskey_IF.Async_StartReceive()
+###				
 ###				self.VAL_Timeline_Roop = 0
 ###			
 ###			### 実行間隔(秒)
